@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
+import { Toast } from './Toast'
 
 const BUTTON_CLASSES =
   'inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-slate-600 transition ' +
@@ -27,7 +28,7 @@ interface ToolbarButtonProps {
   children: ReactNode
 }
 
-function ToolbarButton({ label, onClick, disabled, pressed, children }: ToolbarButtonProps) {
+export function ToolbarButton({ label, onClick, disabled, pressed, children }: ToolbarButtonProps) {
   return (
     <button
       type="button"
@@ -81,14 +82,7 @@ export function Toolbar({
 }: ToolbarProps) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex flex-col items-center gap-2 px-4">
-      {message ? (
-        <div
-          role="status"
-          className="pointer-events-auto rounded-full border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-lg backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/95 dark:text-slate-200"
-        >
-          {message}
-        </div>
-      ) : null}
+      {message ? <Toast message={message} className="pointer-events-auto" /> : null}
       <div className="pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-lg shadow-slate-900/5 backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/90 dark:shadow-black/30">
         <ToolbarButton label="Zoom in" onClick={onZoomIn} disabled={disabled}>
           <ZoomIn className="size-4" aria-hidden="true" />

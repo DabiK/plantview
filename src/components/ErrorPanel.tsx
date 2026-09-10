@@ -8,10 +8,12 @@ export interface ErrorPanelProps {
   line?: number | null
   /** When set, shows an "Open in editor" link. */
   editHref?: string
+  /** When set, the line chip becomes a button that jumps to the line. */
+  onLineClick?: () => void
 }
 
 /** Styled error card shown when a diagram cannot be decoded or rendered. */
-export function ErrorPanel({ message, line = null, editHref }: ErrorPanelProps) {
+export function ErrorPanel({ message, line = null, editHref, onLineClick }: ErrorPanelProps) {
   return (
     <div
       role="alert"
@@ -25,9 +27,20 @@ export function ErrorPanel({ message, line = null, editHref }: ErrorPanelProps) 
       </h2>
       <p className="mt-2 text-sm break-words text-slate-600 dark:text-slate-300">{message}</p>
       {line !== null ? (
-        <p className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          Error at line {line}
-        </p>
+        onLineClick ? (
+          <button
+            type="button"
+            onClick={onLineClick}
+            title="Go to line in the editor"
+            className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 font-mono text-xs text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+          >
+            Error at line {line}
+          </button>
+        ) : (
+          <p className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 font-mono text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            Error at line {line}
+          </p>
+        )
       ) : null}
       {editHref ? (
         <div className="mt-6">

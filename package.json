@@ -13,6 +13,7 @@
     "postinstall": "node scripts/sync-plantuml-assets.mjs"
   },
   "dependencies": {
+    "@codemirror/language": "^6.12.4",
     "@plantuml/core": "^1.2026.8",
     "@uiw/react-codemirror": "^4.25.11",
     "dompurify": "^3.4.15",

@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify'
+import { detectEmbeddedRenderError } from './diagram-error'
 
 /**
  * PlantUML engine assets are served as static files (copied to
@@ -252,6 +253,14 @@ export function renderPlantUml(
       throw supersededError()
     }
 
-    return sanitizeSvg(rawSvg)
+    const svg = sanitizeSvg(rawSvg)
+    const embeddedError = detectEmbeddedRenderError(svg)
+    if (embeddedError) {
+      throw new PlantUmlRenderError(embeddedError.message, {
+        line: embeddedError.line,
+      })
+    }
+
+    return svg
   })
 }

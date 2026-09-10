@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/language':
+        specifier: ^6.12.4
+        version: 6.12.4
       '@plantuml/core':
         specifier: ^1.2026.8
         version: 1.2026.8
