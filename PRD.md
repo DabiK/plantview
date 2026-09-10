@@ -35,7 +35,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `pnpm dev` sert l'app ; `/`, `/view/abc`, `/edit/abc` répondent sans erreur console.
   > - Un seul commit atomique.
 
-- [ ] #2 — M2 — Codec d'URL PlantUML (décoder/encoder) + tests (labels: —)
+- [x] #2 — M2 — Codec d'URL PlantUML (décoder/encoder) + tests (labels: —)
 
   **Issue #2 — détail complet**
   >

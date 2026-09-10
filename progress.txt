@@ -16,7 +16,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | # | Tâche | Statut |
 | --- | --- | --- |
 | 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | DONE |
-| 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | TODO |
+| 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | DONE |
 | 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | TODO |
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | TODO |
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | TODO |
@@ -38,4 +38,14 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
 - Scripts package.json : `dev`, `build`, `lint`, `typecheck` (`tsc -b`), `test` (`vitest run --passWithNoTests`), `preview`.
 - Router : `src/main.tsx` (BrowserRouter) + `src/App.tsx` avec `/` → Home, `/view/:code` → View, `/edit/:code?` → Edit (placeholders sans logique métier). `src/components/` et `src/lib/` créés (`.gitkeep`).
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. QA navigateur (chrome-devtools) : `/`, `/view/abc`, `/edit/abc`, `/edit` rendus correctement, zéro erreur console.
+
+### M2 — Codec d'URL PlantUML (décoder/encoder) + tests — DONE
+
+- `src/lib/plantuml-encoding.ts` :
+  - `decodeDiagram(input)` : extraction (code brut, URL `…/png|svg|txt|uml|view/<code>`, query `?text=`/`?code=`), décodage `plantuml-encoder`, normalisation `\r\n`/`\r` → `\n` (gère les `\r\r` de PlantText), `DiagramDecodeError` si vide/illisible (avec `cause`), message explicite pour URL sans code.
+  - `encodeDiagram(source)` : codec standard ; sortie limitée à l'alphabet URL-safe `[0-9A-Za-z_-]` (vérifié par test).
+  - `extractDiagramCode(input)` : helper d'extraction réutilisable (M6), retourne `''` si aucun code dans une URL. Détection URL : scheme `://`, `www.`, ou chemin absolu `/…`. Décodage `decodeURIComponent` tolérant (try/catch).
+- Tests `src/lib/plantuml-encoding.test.ts` (Vitest env node, 14 tests) : code de référence → lignes non vides `['@startuml', 'Bob -> Alice: Hello!', '@enduml']` ; URL PlantText complète ; round-trip ASCII et accents (`Café à la plage`) ; invalide/vide → `DiagramDecodeError` ; extraction URL plantuml.com/PlantText/PlantView (avec query) ; alphabet du code.
+- Vérifié en plus : le bundle navigateur de `plantuml-encoder` (pako) round-trip correctement les accents et reste compatible avec le build node → liens de partage M4/M5 fiables.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts (build 261 Ko, moteur PlantUML toujours hors bundle). Commit `9f177e9`, issue #2 fermée.
 
