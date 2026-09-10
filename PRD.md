@@ -137,7 +137,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `printf '@startuml\nBob -> Alice: Hello!\n@enduml\n' | pnpm encode` produit une URL `/view/<code>` dont le décodage redonne la source.
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts ; `skill/SKILL.md` présent et cohérent avec la commande réelle.
 
-- [ ] #9 — M9 — Style par défaut soigné du rendu (design injecté, pas de thèmes) (labels: —)
+- [x] #9 — M9 — Style par défaut soigné du rendu (design injecté, pas de thèmes) (labels: —)
 
   **Issue #9 — détail complet**
   >

@@ -23,7 +23,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | DONE |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | DONE |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | DONE |
-| 9 | M9 — Style par défaut soigné du rendu (design injecté) | TODO |
+| 9 | M9 — Style par défaut soigné du rendu (design injecté) | DONE |
 | 10 | M10 — Historique local des diagrammes ouverts (localStorage) | TODO |
 | 11 | M11 — Déplacer les nœuds (drag) dans le viewer | TODO |
 
@@ -171,4 +171,28 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
 - README « Liens pour agents » complété : exemple exact, sources d'entrée, `--base`/`PLANTVIEW_BASE_URL`, `--code-only`, comportement d'erreur, lien vers `skill/SKILL.md` (retrait du « M8 » placeholder).
 - QA : `printf '@startuml\n…\n@enduml\n' | pnpm encode` → URL dont le décodage redonne la source ; URL générée ouverte dans le navigateur (chrome-devtools, dev) → titre + Bob/Alice + message affichés, zéro erreur console. `pnpm encode --silent` correctement rejeté (option inconnue transmise par pnpm, exit 1).
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 6/6). Commit `20865b4`, issue #8 fermée.
+
+### M9 — Style par défaut soigné du rendu (design injecté, pas de thèmes) — DONE
+
+- **Découvertes moteur (spike chrome-devtools, décisives pour l'implémentation)** :
+  - Dans un bloc `<style>`, **une propriété par ligne** : deux propriétés sur la même ligne invalident tout le bloc (échec silencieux). `root { BackgroundColor X }` sur une ligne fonctionne ; `usecase { BackgroundColor X LineColor Y }` non.
+  - La liste complète des cibles de style est extractible du moteur (table de strings de `plantuml.js`) : `root`, `document`, `node`, `arrow`, `class`, `entity`, `interface`, `component`, `usecase`, `object`, `participant`, `actor`, `boundary`, `control`, `database`, `collections`, `queue`, `stack`, `storage`, `node`, `cloud`, `artifact`, `folder`, `card`, `rectangle`, `person`, `hexagon`, `package`, `state`, `activity`, `diamond`, `activityBar`, `start`, `stop`, `note`, `spot`, `lifeLine`, `groupHeader`…
+  - Précédence vérifiée : notre bloc placé **avant** le contenu utilisateur perd contre un `skinparam`/`<style>` utilisateur postérieur (comme exigé). Deux blocs `<style>` : le dernier gagne.
+  - `node` n'est **pas** un sélecteur générique qui cascade (testé sur class/component/usecase/sequence/activity/state/object : aucun match) → il faut énumérer les types. `arrow`, lui, marche partout.
+  - `document { BackgroundColor … }` peint le fond de page (rect + `background-color` SVG) sans colorer les nœuds, contrairement à `root.BackgroundColor` qui cascade sur les ellipses usecase.
+  - Les icônes de classe (`C`/`I`/`E` cerclés) sont des `spot` (fill + `FontColor` de la lettre) ; les points de visibilité (public/privé) gardent leurs couleurs sémantiques.
+  - L'option `{ dark }` du moteur est bien écrasée par notre bloc (notre variante gagne).
+- `src/lib/default-style.ts` :
+  - `buildDefaultStyleBlock({ dark })` : `<style>` (root, document + title/caption/header/footer, arrow, 23 types de nœuds, actor, participant, state, activity, diamond, activityBar, start/stop, note, spot, `sequenceDiagram { lifeLine, groupHeader }`) + repli `skinparam` (DefaultFontColor, ArrowColor, Note*, Actor*, Usecase*, SequenceLifeLineBorderColor, Activity*, State*) pour les éléments non couverts par le style. Palettes slate alignées sur l'UI (dark `#020617`/`#1E293B`/`#475569`/`#E2E8F0`/`#94A3B8`, accents note ambre ; light `#FFFFFF`/`#F8FAFC`/`#CBD5E1`/`#0F172A`/`#64748B`). Police = pile système de l'UI (Tailwind `font-sans`).
+  - `injectDefaultStyle(source, { dark })` → `{ source, lineOffset }` : insertion **juste après la première ligne `@start…`** (regex multilignes, préserve `\r\n`), ou en tête s'il n'y a pas de directive ; `lineOffset` = nombre de lignes ajoutées.
+  - **Garde « corps vide »** : si la source ne contient que directives/commentaires/lignes vides, aucune injection → le moteur conserve son erreur habituelle « Empty description » (sans la garde, le bloc injecté comptait comme contenu et affichait un diagramme vide).
+  - `mapInjectedLineToSourceLine(line, lineOffset)` : mappe les lignes d'erreur moteur vers la source utilisateur (les lignes du bloc injecté → `null`).
+- `src/lib/render-plantuml.ts` : injection avant `renderToString` ; les lignes d'erreur (`onError` et SVG d'erreur embarqué) sont mappées avec `lineOffset`. **Régression évitée** : sans cette compensation, une erreur en ligne 3 utilisateur aurait pointé vers la ligne ~90 (bloc injecté) dans l'éditeur.
+- Tests : +13 (92 au total) — `default-style.test.ts` : insertion après `@startuml`/`@startmindmap`, tête sans directive, offset identique dans les deux cas, précédence (style/skinparam utilisateur conservés après le bloc), fins de ligne `\r\n`, source utilisateur intacte (retrait du bloc = source d'origine), variantes dark/light, mapping de lignes (null, lignes du bloc), corps vide non injecté.
+- QA navigateur (chrome-devtools, dev) :
+  - Grille 2×4 des 4 exemples rendus **par le vrai `renderPlantUml`** (dark + light) : aucun SVG d'erreur, rendu cohérent sur sequence / class / activity / usecase ; icônes de classe harmonisées (spots monochromes), notes ambre, acteurs contrastés, barres/diamants d'activité dans la palette.
+  - Viewer : class dark plein écran OK (fond `#020617`, cartes `#1E293B`, flèches `#94A3B8`) ; sequence light OK (police système `ui-sans-serif…` et palette présents dans le SVG affiché — donc dans l'export, qui sérialise exactement ce SVG).
+  - Précédence réelle via `renderPlantUml` : `<style>` utilisateur `#FF00FF` et `skinparam ArrowColor #00FF00` gagnent bien sur le bloc injecté.
+  - Lignes d'erreur : source invalide en ligne 3 → `PlantUmlRenderError.line === 3` (API) et l'éditeur affiche « Error at line 3 » cliquable (vérifié en DOM) ; `@startuml\n@enduml` rejette toujours « Empty description » (ligne 2) ; note/actor en dark vérifiés.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 6/6 ; bundle 851,4 Ko, +4 Ko). Commit `95ee949`, issue #9 fermée.
 
