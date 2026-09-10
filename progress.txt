@@ -22,7 +22,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | DONE |
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | DONE |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | DONE |
-| 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
+| 8 | M8 — Script d'encodage + skill agent pour générer les liens | DONE |
 | 9 | M9 — Style par défaut soigné du rendu (design injecté) | TODO |
 | 10 | M10 — Historique local des diagrammes ouverts (localStorage) | TODO |
 | 11 | M11 — Déplacer les nœuds (drag) dans le viewer | TODO |
@@ -157,4 +157,18 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - `public/_redirects` : `/* /index.html 200` — vérifié présent dans `dist/_redirects` après build (Vite copie `public/`).
 - README final : ajout de `pnpm test:e2e` + note `playwright install chromium`, section **Déploiement** (SPA statique, fallback `index.html` par hébergeur), section **Limitation v1** (pas d'URL image embarquable README/Slack, export SVG/PNG à la place). Routes/dev/build existants conservés.
 - Vérifs finales : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts + `pnpm test:e2e` 6/6 verts headless. Bundle inchangé (847,5 Ko) : Playwright n'entre pas dans le build.
+
+### M8 — Script d'encodage + skill agent pour générer les liens — DONE
+
+- `scripts/encode.mjs` (ESM, `node:util` `parseArgs`, importe `plantuml-encoder`) :
+  - entrée : `--text <source>`, `--file <path>` ou stdin (refus si stdin est un TTY sans input) ; `--text` + `--file` simultanés → erreur ;
+  - sortie par défaut : `<base>/view/<code>` ; base = `--base <url>` > `PLANTVIEW_BASE_URL` > `http://localhost:5173`, slashs finaux normalisés ; `--code-only` n'affiche que le code ;
+  - `-h`/`--help` (exit 0), toute erreur → message clair sur stderr + exit 1 (source vide, fichier illisible, option inconnue, base vide) ;
+  - **bug attrapé par le test** : `PLANTVIEW_BASE_URL=''` (variable vide) écrasait le défaut avec `??` → corrigé en `envValue || DEFAULT_BASE_URL` (seul `--base` explicite peut être vide → erreur).
+- `src/lib/encode-script.test.ts` (11 tests) : spawn réel de `node scripts/encode.mjs` (`spawnSync`) — happy path `--text` (URL complète + décodage), pipeline d'acceptance `printf … | pnpm encode`, `--code-only` (alphabet + décodage), `--file` (fichier temporaire), `--base` avec slashs, `PLANTVIEW_BASE_URL` + priorité du flag, entrée vide, `--text`+`--file`, option inconnue, fichier illisible, `--help`. Total suite : **79 tests**.
+- Dépendance dev ajoutée : `@types/node` (nécessaire pour typer `node:child_process`/`node:process` dans un test TS ; aucun impact sur le bundle, `window.setTimeout` déjà utilisé partout dans `src`).
+- `skill/SKILL.md` : skill agent autonome (frontmatter `name`/`description`) — quand l'utiliser, **règle absolue : jamais d'encodage à la main**, workflow en 3 étapes, exemples `printf … | pnpm encode`, tableau des options, vérification. 100 % cohérent avec le script réel.
+- README « Liens pour agents » complété : exemple exact, sources d'entrée, `--base`/`PLANTVIEW_BASE_URL`, `--code-only`, comportement d'erreur, lien vers `skill/SKILL.md` (retrait du « M8 » placeholder).
+- QA : `printf '@startuml\n…\n@enduml\n' | pnpm encode` → URL dont le décodage redonne la source ; URL générée ouverte dans le navigateur (chrome-devtools, dev) → titre + Bob/Alice + message affichés, zéro erreur console. `pnpm encode --silent` correctement rejeté (option inconnue transmise par pnpm, exit 1).
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 6/6). Commit `20865b4`, issue #8 fermée.
 

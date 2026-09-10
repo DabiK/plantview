@@ -112,7 +112,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `pnpm test:e2e` vert headless + `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
   > - Les 3 configs de déploiement existent. README à jour.
 
-- [ ] #8 — M8 — Script d'encodage + skill agent pour générer les liens (labels: —)
+- [x] #8 — M8 — Script d'encodage + skill agent pour générer les liens (labels: —)
 
   **Issue #8 — détail complet**
   >
