@@ -1,4 +1,8 @@
 import DOMPurify from 'dompurify'
+import {
+  injectDefaultStyle,
+  mapInjectedLineToSourceLine,
+} from './default-style'
 import { detectEmbeddedRenderError } from './diagram-error'
 
 /**
@@ -227,15 +231,21 @@ export function renderPlantUml(
       throw supersededError()
     }
 
+    // The default style is injected before user content (user wins) and the
+    // line offset maps engine error lines back to the original source.
+    const injected = injectDefaultStyle(source, { dark: options.dark === true })
+
     const rawSvg = await new Promise<string>((resolve, reject) => {
       try {
         engine.renderToString(
-          source.split(/\r\n|\n|\r/),
+          injected.source.split(/\r\n|\n|\r/),
           (svg) => resolve(svg),
           (message) => {
             const details = parsePlantUmlError(message)
             reject(
-              new PlantUmlRenderError(details.message, { line: details.line }),
+              new PlantUmlRenderError(details.message, {
+                line: mapInjectedLineToSourceLine(details.line, injected.lineOffset),
+              }),
             )
           },
           { dark: options.dark === true },
@@ -257,7 +267,7 @@ export function renderPlantUml(
     const embeddedError = detectEmbeddedRenderError(svg)
     if (embeddedError) {
       throw new PlantUmlRenderError(embeddedError.message, {
-        line: embeddedError.line,
+        line: mapInjectedLineToSourceLine(embeddedError.line, injected.lineOffset),
       })
     }
 
