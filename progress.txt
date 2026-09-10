@@ -20,7 +20,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | DONE |
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | DONE |
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | DONE |
-| 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
+| 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | DONE |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
 | 9 | M9 — Style par défaut soigné du rendu (design injecté) | TODO |
@@ -117,4 +117,26 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - Mobile 500 px (émulation) : header compact, éditeur au-dessus de la preview, pas de débordement. Zéro message console error/warn.
 - Tests : +29 (61 au total) — `diagram-error.test.ts`, `plantuml-language.test.ts`, `editor-state.test.ts`.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. **Bundle : 832 Ko (269 Ko gzip)** — CodeMirror ajouté au chunk principal ; piste si besoin plus tard : `React.lazy` sur la route Edit (non fait, hors périmètre M5). Commit `cbc1375`, issue #5 fermée.
+
+### M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) — DONE
+
+- `src/lib/parse-diagram-input.ts` — `parseDiagramInput(input)` en 4 branches, ordre volontaire :
+  - vide → `empty` ;
+  - `@start…` (regex `/@start[a-z]+/i`, couvre `@startuml`, `@startmindmap`, `@startgantt`…) → `source` ;
+  - URL (scheme/`www.`/chemin absolu) → code extrait via `extractDiagramCode` (réutilise M2 : `…/png|svg|txt|uml|view/<code>`, `?text=`) ; URL sans code → repli `source` ;
+  - token seul : code seulement si alphabet `[0-9A-Za-z_-]`, longueur ≥ 12 **et décodage réussi** (`decodeDiagram`). Le garde de décodage évite qu'un mot long (ex. `this-is-not-a-valid-plantuml-code`) soit pris pour un code — vérifié manuellement : 45 chaînes aléatoires de 24 caractères ne décodent jamais ;
+  - sinon → `source` (fragment sans `@startuml`, cas fréquent au collage).
+- `src/routes/Home.tsx` :
+  - header (logo, Editor, For agents, toggle dark), hero 2 colonnes (texte + carte de collage) responsive ;
+  - carte de collage : textarea, soumission par bouton **ou ⌘/Ctrl+Entrée**, erreur inline `role=alert` + focus si vide (vérifié : `aria-invalid`), `source` → `encodeDiagram` puis navigation `/view/<code>`, `code` → navigation directe ;
+  - galerie : 4 cartes depuis `examples.ts`, codes calculés une fois au chargement, chaque carte est un `<Link>` vers `/view/<code>`, icône par type + extrait de source en mono avec fondu (masque CSS) ;
+  - section « For agents » : format `/view/<code>`, rappel du codec standard, **URL d'exemple générée à l'exécution** (`encodeDiagram` + `buildViewUrl`, vérifiée : affiche Bob/Alice), commande `printf … | pnpm encode` mentionnée (script M8, pas de dépendance) ;
+  - thème identique à View/Edit : `?dark=0|1` > localStorage `plantview:theme` > système, toggle dans le header, `applyThemeToDocument` + `storeTheme`.
+  - **Décision — pas de mini-rendus moteur dans la galerie** : l'issue dit « mini-aperçu si simple ». Le moteur TeaVM pèse ~8,6 Mo et bloque le thread principal ; rendre 4 vignettes au chargement de la landing page aurait ajouté plusieurs secondes de jank (et 4 re-rendus à chaque toggle dark). L'aperçu est donc un extrait de source typographié — la page reste légère et le moteur n'est chargé que dans le viewer/l'éditeur.
+- Tests : +7 (68 au total) — `parse-diagram-input.test.ts` : vide, `@startuml`/`@startmindmap`, fragment, URL PlantText / plantuml.com `/png` `/svg?query` / PlantView `/view?dark=1`, code de référence seul, token alphabet long non décodable, URL sans code.
+- QA navigateur (chrome-devtools, dev **et** `pnpm preview`) :
+  - soumission vide → alerte inline + focus textarea ; PlantUML brut via ⌘+Entrée → viewer affiche « Hello from the home page » ; URL PlantText de référence via bouton → Bob/Alice ; clic carte exemple (sequence) → viewer OK ; URL d'exemple « For agents » → Bob/Alice ;
+  - `?dark=0` force light ; toggle → `html.dark`, `colorScheme`, localStorage `dark` ;
+  - mobile 390 px : header compact, tout empilé, aucun débordement horizontal ; zéro message console error/warn sur toute la session.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. Bundle 847,5 Ko (272,9 Ko gzip) — +15 Ko vs M5 (icônes + Home). Commit `076281c`, issue #6 fermée.
 

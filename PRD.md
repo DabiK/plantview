@@ -55,7 +55,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - QA navigateur : taper du PlantUML met à jour la preview ; recharger la page conserve le brouillon ; « Copy link » produit une URL `/view/<code>` qui affiche le même diagramme ; une syntaxe invalide affiche le panneau d'erreur stylé avec la ligne ; zéro erreur console.
   > - Tests unitaires pour toute logique pure ajoutée (ex. précédence de chargement URL > draft > défaut).
 
-- [ ] #6 — M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) (labels: —)
+- [x] #6 — M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) (labels: —)
 
   **Issue #6 — détail complet**
   >
