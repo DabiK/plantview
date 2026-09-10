@@ -64,7 +64,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
   > - Les 4 cas de test ci-dessus passent. Un seul commit atomique.
 
-- [ ] #3 — M3 — Rendu PlantUML 100 % local (@plantuml/core) lazy-loadé + sanitize (labels: —)
+- [x] #3 — M3 — Rendu PlantUML 100 % local (@plantuml/core) lazy-loadé + sanitize (labels: —)
 
   **Issue #3 — détail complet**
   >

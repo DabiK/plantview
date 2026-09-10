@@ -17,7 +17,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | --- | --- | --- |
 | 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | DONE |
 | 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | DONE |
-| 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | TODO |
+| 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | DONE |
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | TODO |
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | TODO |
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
@@ -48,4 +48,24 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
 - Tests `src/lib/plantuml-encoding.test.ts` (Vitest env node, 14 tests) : code de référence → lignes non vides `['@startuml', 'Bob -> Alice: Hello!', '@enduml']` ; URL PlantText complète ; round-trip ASCII et accents (`Café à la plage`) ; invalide/vide → `DiagramDecodeError` ; extraction URL plantuml.com/PlantText/PlantView (avec query) ; alphabet du code.
 - Vérifié en plus : le bundle navigateur de `plantuml-encoder` (pako) round-trip correctement les accents et reste compatible avec le build node → liens de partage M4/M5 fiables.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts (build 261 Ko, moteur PlantUML toujours hors bundle). Commit `9f177e9`, issue #2 fermée.
+
+### M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize — DONE
+
+- `scripts/sync-plantuml-assets.mjs` : copie `plantuml.js`, `viz-global.js`, `emoji.js`, `openiconic.js`, `themes.js` de `node_modules/@plantuml/core/` vers `public/plantuml/` (créé au besoin, exit 1 si le package est absent). `"postinstall"` ajouté dans `package.json`, vérifié via `pnpm install --frozen-lockfile` (le lockfile ne bouge pas).
+- `src/lib/render-plantuml.ts` :
+  - `renderPlantUml(source, { dark })` → SVG sanitizé. Chargement unique de `viz-global.js` par balise `<script>` classique (singleton, rejet propre + retry possible après échec), puis import dynamique du moteur. `window.PLANTUML_STDLIB_BASE = <base>/plantuml/` pour que themes/emoji/openiconic se chargent depuis nos assets.
+  - Les rendus sont **sérialisés par une queue de promesses** : le moteur TeaVM partage son état interne (doc GITHUB_INTEGRATION.md). Garde « latest request » par `requestId` : une requête périmée rejette avec `PlantUmlRenderError` et `superseded: true` (le caller ignore).
+  - `parsePlantUmlError(raw)` : extrait `Error line (\d+)` (→ `line`, sinon `null`) et garde la 1re ligne utile comme message court ; fallback « Unknown PlantUML error. ».
+  - Sanitize DOMPurify `USE_PROFILES: { svg: true, svgFilters: true }` ; vérifié en navigateur : `xmlns` et `viewBox` conservés.
+  - Aucun import statique de `@plantuml/core` (grep sur `src/` vide) ; le moteur n'est pas dans le bundle.
+- **Piège Vite 7 résolu** : `import(/* @vite-ignore */ '/plantuml/plantuml.js')` est réécrit en `__vite__injectQuery(url, 'import')` → `?import` sur un fichier de `public/` = 500 « This file is in /public … should not be imported from source code ». `@vite-ignore` ne l'empêche pas. Solution : construire une **URL absolue** via `new URL(`${import.meta.env.BASE_URL}plantuml/plantuml.js`, window.location.href)` ; `injectQuery` ne touche pas les URLs `http(s)://`. Testé en dev **et** en `pnpm preview`.
+- **Constat moteur (important pour M5)** : les erreurs de syntaxe ne passent pas par `onError` — le moteur résout un SVG contenant le texte d'erreur (`Syntax Error? (line N)`, « Diagram not supported… »). `onError` ne semble servir qu'aux échecs sévères. M5 devra détecter ces SVG d'erreur (heuristique texte/style) pour afficher le panneau stylé ; `parsePlantUmlError` reste utile si `onError` se déclenche.
+- QA navigateur (chrome-devtools, dev puis preview) :
+  - `@startuml\nBob -> Alice: Hello!\n@enduml` → SVG avec `<title>Bob</title>`, « Alice », `xmlns`, `viewBox`, ~650 ms après warm-up.
+  - `{ dark: true }` → SVG différent du rendu clair.
+  - Deux rendus lancés coup sur coup : le 1er rejette `PlantUmlRenderError { superseded: true }`, le 2e (C→D) aboutit.
+  - Zéro message console de niveau erreur/warn (le moteur log beaucoup en `console.log`, c'est normal).
+  - `dist/plantuml/{plantuml.js,viz-global.js,…}` présents après build ; `dist/assets/*.js` = 261 Ko (< 1 Mo). Le module `render-plantuml` est tree-shaké pour l'instant (aucune route ne l'importe encore) : normal, M4 le branchera.
+- Tests : `src/lib/render-plantuml.test.ts` (7 tests) — `parsePlantUmlError` avec/sans ligne, fallback vide, rejet sans DOM (node), échec de chargement de `viz-global.js` + retry (document stubé). Total suite : 20 tests.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. Commit `9ffc921`, issue #3 fermée.
 
