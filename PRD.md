@@ -81,7 +81,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts (tests de `parseDiagramInput` inclus).
   > - QA navigateur : coller un PlantUML brut → viewer affiche le diagramme ; coller l'URL PlantText de référence → viewer affiche Bob/Alice ; cliquer une carte d'exemple → viewer OK ; zéro erreur console.
 
-- [ ] #7 — M7 — E2E Playwright + configs de déploiement SPA + doc finale (labels: —)
+- [x] #7 — M7 — E2E Playwright + configs de déploiement SPA + doc finale (labels: —)
 
   **Issue #7 — détail complet**
   >

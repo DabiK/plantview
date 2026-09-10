@@ -21,7 +21,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | DONE |
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | DONE |
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | DONE |
-| 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
+| 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | DONE |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
 | 9 | M9 — Style par défaut soigné du rendu (design injecté) | TODO |
 | 10 | M10 — Historique local des diagrammes ouverts (localStorage) | TODO |
@@ -139,4 +139,22 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - `?dark=0` force light ; toggle → `html.dark`, `colorScheme`, localStorage `dark` ;
   - mobile 390 px : header compact, tout empilé, aucun débordement horizontal ; zéro message console error/warn sur toute la session.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. Bundle 847,5 Ko (272,9 Ko gzip) — +15 Ko vs M5 (icônes + Home). Commit `076281c`, issue #6 fermée.
+
+### M7 — E2E Playwright + configs de déploiement SPA + doc finale — DONE
+
+- Dépendance `@playwright/test` 1.63 + `pnpm exec playwright install chromium` (Chrome for Testing 153 + headless shell, ~276 Mo dans le cache local). Téléchargement OK, pas de contournement nécessaire.
+- `playwright.config.ts` : `testDir ./e2e`, `webServer` = `pnpm dev` sur `http://localhost:5173` (`reuseExistingServer: !CI`, timeout 120 s), `baseURL`, reporter `list`, headless, projet chromium (`devices['Desktop Chrome']`), timeouts larges (test 90 s, expect 30 s) car le moteur (~8,6 Mo) met plusieurs secondes à s'initialiser. En CI : `retries 1`, `workers 1`.
+- Script `"test:e2e": "playwright test"` ajouté.
+- **Piège évité — Vitest vs specs Playwright** : sans config, `vitest run` utilise l'include par défaut `**/*.test.ts` et aurait ramassé `e2e/*.spec.ts`. Création de `vitest.config.ts` : `exclude: [...configDefaults.exclude, 'e2e/**']`. Vérifié : les 10 fichiers / 68 tests unitaires sont intacts, aucun test e2e n'est exécuté par Vitest.
+- ESLint : bloc dédié `playwright.config.ts` + `e2e/**/*.ts` avec `globals.node` (la config globale n'expose que `globals.browser`, or la config Playwright lit `process.env.CI`).
+- `e2e/` — 6 tests, tous verts en **15,5 s** headless :
+  - `home.spec.ts` : 4 cartes `#examples a[href^="/view/"]` (hrefs valides) ; clic sur la 1re → URL `/view/<code>`.
+  - `viewer.spec.ts` : code de référence → `.diagram-svg svg` contient « Bob » et « Alice » ; `?dark=1` → `html[data-theme=dark]` + classe `.dark` ; code invalide (`…code!!!`) → `role=alert` « Unable to render this diagram » + « unable to decode » + lien « Open in editor ».
+  - `editor.spec.ts` : localStorage purgé (`addInitScript`) → `/edit` charge l'exemple par défaut → `ControlOrMeta+A` puis saisie de `@startuml Alice -> Bob: Ping @enduml` dans `.cm-content` → le SVG de preview contient « Ping ».
+- Déploiement statique SPA (3 configs demandées) :
+  - `vercel.json` : rewrite `/(.*)` → `/index.html` (les `rewrites` Vercel s'appliquent après le filesystem, les assets restent servis) ;
+  - `netlify.toml` : build `pnpm build`, publish `dist`, redirect `/*` → `/index.html` 200 ;
+  - `public/_redirects` : `/* /index.html 200` — vérifié présent dans `dist/_redirects` après build (Vite copie `public/`).
+- README final : ajout de `pnpm test:e2e` + note `playwright install chromium`, section **Déploiement** (SPA statique, fallback `index.html` par hébergeur), section **Limitation v1** (pas d'URL image embarquable README/Slack, export SVG/PNG à la place). Routes/dev/build existants conservés.
+- Vérifs finales : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts + `pnpm test:e2e` 6/6 verts headless. Bundle inchangé (847,5 Ko) : Playwright n'entre pas dans le build.
 
