@@ -19,7 +19,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | DONE |
 | 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | DONE |
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | DONE |
-| 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | TODO |
+| 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | DONE |
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
@@ -91,4 +91,30 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
 - Tests : +10 (38 au total) — `theme.test.ts`, `urls.test.ts`, `export.test.ts`, `examples.test.ts`.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts (bundle 415,5 Ko < 1 Mo, moteur toujours hors bundle).
 - **Rappel M5** : les erreurs de syntaxe moteur ne passent pas par `onError` (le moteur résout un SVG contenant « Syntax Error? (line N) »). M4 ne les détecte pas (hors périmètre) : l'éditeur M5 devra les détecter pour afficher le panneau stylé.
+
+### M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) — DONE
+
+- **Détection des SVG d'erreur moteur** (le point laissé ouvert par M4) : `src/lib/diagram-error.ts` (`detectEmbeddedRenderError(svg)`), patterns figés sur des fixtures réelles capturées via chrome-devtools :
+  - `Syntax Error?` / `Empty description` + marqueur `[From textarea (line N) ]` → message + ligne ;
+  - `Diagram not supported by this release of PlantUML` (directive inconnue, source vide) → message sans ligne ;
+  - le marqueur `[From …]` sert de garde anti-faux-positif (une note contenant « Syntax Error? » n'est pas signalée).
+  - Intégré dans `renderPlantUml` **après sanitize** : rejet `PlantUmlRenderError` avec `line`. Bénéfice collateral assumé : le viewer M4 affiche désormais le panneau stylé au lieu du SVG rouge du moteur (vérifié : `/view` d'une source invalide → ErrorPanel + « Error at line 2 »).
+- `src/lib/plantuml-language.ts` : `StreamLanguage` PlantUML maison (directives `@…`/`!…`, ~80 mots-clés, flèches (`->`, `-->`, `..>`, `<|--`, `o--`, `*--`…), commentaires ligne (`'` en début de ligne) et bloc (`/' … '/` avec état multi-lignes), chaînes, nombres). 9 tests sur le tokenizer (via `StringStream`).
+- `src/lib/editor-state.ts` : brouillon localStorage `plantview:draft` = `{ source, updatedAt }` (`parseDraft` défensif, `readDraft`/`writeDraft` tolérants : JSON corrompu → null, quota/private mode → no-op) + `resolveInitialEditorState` (précédence **URL > brouillon > exemple**, `codeError` si le `:code` ne décode pas). 10 tests.
+- `src/routes/Edit.tsx` :
+  - split view responsive (CodeMirror à gauche, preview à droite ; empilé < `lg`), thème CodeMirror `light`/`dark` suivant le thème global (`theme.ts` réutilisé, toggle dans le header).
+  - preview live debouncée 400 ms via `renderPlantUml` (garde superseded de M3) ; le dernier SVG valide reste affiché pendant le rendu (badge « Rendering… ») et en cas d'erreur (estompé sous l'`ErrorPanel`) ; skeleton animé au premier chargement.
+  - autosave debouncée 400 ms + indicateur « Saved » discret ; sync URL `history.replaceState` debouncée 900 ms (pas d'entrée d'historique).
+  - header (`EditorHeader.tsx`) : lien home, dropdown des 4 exemples (`examples.ts`), Copy view link (presse-papiers + toast), View diagram (navigation in-app), toggle dark. `Toast.tsx` extrait et réutilisé par `Toolbar.tsx` (refactor sans changement visuel).
+  - erreurs : `ErrorPanel` (M4) affiche le message + puce « Error at line N » **cliquable** (`onLineClick`, prop optionnelle additive) → scroll/sélection dans CodeMirror (`goToLine`).
+  - export SVG/PNG non demandé dans l'éditeur (hors périmètre) ; `DiagramCanvas` réutilisé pour le zoom/pan de la preview.
+- Dépendance ajoutée : `@codemirror/language` (StreamLanguage/StringStream ; `@uiw/react-codemirror` ne le ré-exporte pas).
+- QA navigateur (chrome-devtools, dev) :
+  - `/edit` → exemple par défaut, preview rendue, URL synchronisée ; frappe → preview mise à jour, « Saved », draft localStorage puis rechargement `/edit` → brouillon conservé ; `/edit/<code>` → le code URL gagne sur le brouillon.
+  - syntaxe invalide (`frobnicate x`) → ErrorPanel + « Error at line 2 » ; clic → focus éditeur sur la ligne 2 (`.cm-activeLine`).
+  - Copy view link → « Link copied » et presse-papiers = `…/view/SoWk…` (le même code que l'URL) ; View diagram → `/view/…` affiche Bob/Alice ; dropdown → exemple class chargé et rendu.
+  - Dark/light : toggle → classe `html.dark`, `plantview:theme`, fond CodeMirror et rendu moteur changent.
+  - Mobile 500 px (émulation) : header compact, éditeur au-dessus de la preview, pas de débordement. Zéro message console error/warn.
+- Tests : +29 (61 au total) — `diagram-error.test.ts`, `plantuml-language.test.ts`, `editor-state.test.ts`.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. **Bundle : 832 Ko (269 Ko gzip)** — CodeMirror ajouté au chunk principal ; piste si besoin plus tard : `React.lazy` sur la route Edit (non fait, hors périmètre M5). Commit `cbc1375`, issue #5 fermée.
 

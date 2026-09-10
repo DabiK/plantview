@@ -29,7 +29,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
   > - QA navigateur (MCP chrome-devtools si dispo) : `/view/SoWkIImgAStDuULroazIqBLJSCp9J4wrKl18pSd9L-JbTKZDIm5A0m00` affiche Bob/Alice ; zoom/pan OK ; `?dark=1` change le rendu ; Download PNG produit un fichier non vide ; un code invalide montre l'état d'erreur stylé (pas de crash) ; zéro erreur console.
 
-- [ ] #5 — M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) (labels: —)
+- [x] #5 — M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) (labels: —)
 
   **Issue #5 — détail complet**
   >
