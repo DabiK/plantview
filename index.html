@@ -5,6 +5,31 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PlantView</title>
+    <script>
+      // Applies the resolved theme before first paint (mirrors src/lib/theme.ts).
+      ;(() => {
+        try {
+          const param = new URLSearchParams(window.location.search).get('dark')
+          const stored = localStorage.getItem('plantview:theme')
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const theme =
+            param === '1'
+              ? 'dark'
+              : param === '0'
+                ? 'light'
+                : stored === 'dark' || stored === 'light'
+                  ? stored
+                  : prefersDark
+                    ? 'dark'
+                    : 'light'
+          document.documentElement.classList.toggle('dark', theme === 'dark')
+          document.documentElement.dataset.theme = theme
+          document.documentElement.style.colorScheme = theme
+        } catch {
+          // localStorage/matchMedia can be unavailable; the app resolves the theme again.
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,7 +1,37 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode: the theme is applied to `<html>` (src/lib/theme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html,
 body,
 #root {
   height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+html.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* Discrete dot grid behind the diagram surface. */
+.diagram-grid {
+  background-image: radial-gradient(circle, rgb(100 116 139 / 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+html.dark .diagram-grid {
+  background-image: radial-gradient(circle, rgb(148 163 184 / 0.14) 1px, transparent 1px);
+}
+
+/* PlantUML SVGs keep their intrinsic size; the transform handles scaling. */
+.diagram-svg svg {
+  display: block;
+  max-width: none;
+  height: auto;
+  user-select: none;
+  -webkit-user-select: none;
 }

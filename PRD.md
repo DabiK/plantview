@@ -3,7 +3,7 @@
 Backlog généré depuis les issues GitHub ouvertes. Chaque item est une tâche.
 Coche la case quand la tâche est terminée. Une seule tâche par itération Ralph.
 
-- [ ] #4 — M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) (labels: —)
+- [x] #4 — M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) (labels: —)
 
   **Issue #4 — détail complet**
   >

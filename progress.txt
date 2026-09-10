@@ -18,7 +18,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | DONE |
 | 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | DONE |
 | 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | DONE |
-| 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | TODO |
+| 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | DONE |
 | 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | TODO |
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
@@ -71,4 +71,24 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - `dist/plantuml/{plantuml.js,viz-global.js,…}` présents après build ; `dist/assets/*.js` = 261 Ko (< 1 Mo). Le module `render-plantuml` est tree-shaké pour l'instant (aucune route ne l'importe encore) : normal, M4 le branchera.
 - Tests : `src/lib/render-plantuml.test.ts` (7 tests) — `parsePlantUmlError` avec/sans ligne, fallback vide, rejet sans DOM (node), échec de chargement de `viz-global.js` + retry (document stubé). Total suite : 20 tests.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. Commit `9ffc921`, issue #3 fermée.
+
+### M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) — DONE
+
+- `src/routes/View.tsx` : décodage `:code` → `renderPlantUml`, états loading/ready/error. Pendant un re-rendu (ex. toggle dark) l'ancien SVG reste affiché + badge « Rendering… » (pas de flash de skeleton) ; le skeleton animé n'apparaît qu'au premier rendu. Code invalide → `ErrorPanel` (message + « Open in editor » vers `/edit/<code>`), toolbar conservée avec actions diagramme désactivées.
+- `src/components/DiagramCanvas.tsx` : `react-zoom-pan-pinch` v4 (`TransformWrapper` + `TransformComponent`), `fitOnInit`, ref impérative `zoomIn/zoomOut/fit/reset`. Remonté via `key={code}` pour refitter à chaque nouveau diagramme ; le toggle dark ne remonte pas (le zoom est conservé).
+- `src/components/Toolbar.tsx` : toolbar flottante en bas (`fixed`, `backdrop-blur`, `overflow-x-auto` mobile), boutons zoom +/−/fit/reset, toggle dark (`aria-pressed`), Download SVG, Download PNG, Copy link, Edit. `aria-label` + `title` sur chaque bouton, feedback transitoire (`role=status`, 2,5 s).
+- `src/components/ErrorPanel.tsx` : carte stylée `role=alert`, ligne d'erreur affichée si connue.
+- Thème (décidé par DESIGN.md + issue) : `?dark=0|1` > localStorage `plantview:theme` > `prefers-color-scheme`. `src/lib/theme.ts` (pur, testé) + application `<html>.dark` / `data-theme` / `color-scheme` ; variante Tailwind 4 class-based (`@custom-variant dark`). Script inline pre-paint dans `index.html` pour éviter le flash (duplique volontairement la résolution ; la logique reste dans `theme.ts`).
+- `src/lib/export.ts` : `downloadSvg`, `downloadPng` (SVG → blob → `Image` → canvas ×2 → `toBlob`, fond blanc/#020617 selon dark, object URLs révoquées). Helpers purs testés : `getSvgDimensions` (width/height ou viewBox) et `withExplicitSvgSize` (ajoute width/height explicites, indispensable pour la rasterisation `<img>`). Piège corrigé : `readAttribute` ne doit pas confondre `stroke-width` et `width`.
+- `src/lib/examples.ts` : 4 exemples (sequence, class, activity, usecase) `{ id, title, description, source }`, round-trip codec testé. `src/lib/urls.ts` (`buildViewUrl`) + `src/lib/clipboard.ts` (`copyText` avec fallback textarea/execCommand) ; `copyText` est tolérant : si l'écriture échoue, le viewer affiche « Unable to copy the link ».
+- QA navigateur (chrome-devtools, dev **et** `pnpm preview`) :
+  - Code de référence → Bob/Alice, fit initial (scale ≈ 3,39), zoom +/− (scale 9,95), pan drag (translation modifiée), fit/reset OK.
+  - Thème : système clair → light ; `?dark=1` force dark malgré localStorage light ; `?dark=0` force light malgré localStorage dark ; toggle → light + localStorage `light`.
+  - Copy link → « Link copied ». Download PNG → toast + fichier réel 11 460 octets `image/png` (chemin complet testé en interceptant le `<a download>`) ; SVG idem.
+  - Code invalide → carte d'erreur stylée + lien éditeur, zéro crash/erreur console.
+  - Les 4 exemples `examples.ts` rendus par le moteur : OK, aucun ne contient d'erreur de syntaxe.
+  - Mobile 500 px : toolbar compacte, pas de débordement. Zéro message console error/warn.
+- Tests : +10 (38 au total) — `theme.test.ts`, `urls.test.ts`, `export.test.ts`, `examples.test.ts`.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts (bundle 415,5 Ko < 1 Mo, moteur toujours hors bundle).
+- **Rappel M5** : les erreurs de syntaxe moteur ne passent pas par `onError` (le moteur résout un SVG contenant « Syntax Error? (line N) »). M4 ne les détecte pas (hors périmètre) : l'éditeur M5 devra les détecter pour afficher le panneau stylé.
 
