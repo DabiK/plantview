@@ -3,94 +3,6 @@
 Backlog généré depuis les issues GitHub ouvertes. Chaque item est une tâche.
 Coche la case quand la tâche est terminée. Une seule tâche par itération Ralph.
 
-- [x] #1 — M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base (labels: —)
-
-  **Issue #1 — détail complet**
-  > ## Contexte
-  >
-  > Repo vide : seuls README.md, AGENTS.md, docs/DESIGN.md et .gitignore existent. Aucun package.json. Cette issue crée le squelette de l'app. **Lire AGENTS.md et docs/DESIGN.md avant de commencer** : les décisions techniques sont verrouillées. Le dossier de travail est le repo ; tout chemin hors repo doit passer par `mktemp -d`.
-  >
-  > ## Changements
-  >
-  > 1. Scaffolder le template Vite React-TS dans un dossier temporaire **vide**, sans interaction :
-  >
-  >    ```bash
-  >    TMP=$(mktemp -d)
-  >    (cd "$TMP" && pnpm dlx create-vite@latest . --template react-ts)
-  >    ```
-  >
-  >    Copier ensuite les fichiers du template dans le repo (package.json, tsconfig*.json, vite.config.ts, index.html, src/, eslint.config.js) **sans écraser** README.md, AGENTS.md, docs/ ni .gitignore (fusionner .gitignore si le template en a un). Supprimer le dossier temporaire.
-  >
-  > 2. Dépendances :
-  >    - `pnpm add react-router-dom @plantuml/core plantuml-encoder dompurify react-zoom-pan-pinch @uiw/react-codemirror lucide-react`
-  >    - `pnpm add -D tailwindcss @tailwindcss/vite @types/plantuml-encoder vitest`
-  > 3. Tailwind 4 : plugin `@tailwindcss/vite` dans `vite.config.ts` ; `src/index.css` = `@import "tailwindcss";` + reset de base.
-  > 4. Scripts package.json : `dev`, `build` (`tsc -b && vite build`), `preview`, `lint` (eslint), `typecheck` (`tsc -b`), `test` (`vitest run --passWithNoTests`).
-  > 5. Structure : `src/routes/`, `src/components/`, `src/lib/` ; router react-router dans `src/main.tsx` + `src/App.tsx` avec 3 routes placeholder : `/` (Home), `/view/:code` (View), `/edit/:code?` (Edit). Pas de logique métier.
-  > 6. Vérifier que `node_modules/`, `dist/`, `public/plantuml/`, `.ralph/` restent ignorés (`git status --short` propre hors fichiers voulus).
-  >
-  > ## Acceptance
-  >
-  > - `pnpm install && pnpm lint && pnpm typecheck && pnpm test && pnpm build` passent.
-  > - `pnpm dev` sert l'app ; `/`, `/view/abc`, `/edit/abc` répondent sans erreur console.
-  > - Un seul commit atomique.
-
-- [x] #2 — M2 — Codec d'URL PlantUML (décoder/encoder) + tests (labels: —)
-
-  **Issue #2 — détail complet**
-  >
-  > ## Contexte
-  >
-  > L'app lit un diagramme depuis l'URL au format PlantUML standard (deflate + alphabet base64 custom), compatible PlantText/plantuml.com. Code de référence (doit donner le diagramme « Bob -> Alice: Hello! ») :
-  >
-  > `SoWkIImgAStDuULroazIqBLJSCp9J4wrKl18pSd9L-JbTKZDIm5A0m00`
-  >
-  > Piège connu : `plantuml-encoder` décode ce code avec des `\r` (parfois doublés) — la sortie doit être normalisée en `\n`. Re-encoder le texte normalisé donne un code différent mais équivalent (le rendu est identique) : ne pas tester l'égalité octet-à-octet avec le code d'origine.
-  >
-  > ## Changements
-  >
-  > - `src/lib/plantuml-encoding.ts` :
-  >   - `decodeDiagram(input: string): string` — accepte un code brut ou une URL complète (`https://…/png/<code>`, `/svg/`, `/txt/`, query string) et extrait le code ; décode via `plantuml-encoder` ; normalise `\r\n`/`\r` → `\n` ; lève `DiagramDecodeError` si le code est invalide/vide.
-  >   - `encodeDiagram(source: string): string` — via `plantuml-encoder`.
-  >   - `extractDiagramCode(input: string): string` — helper d'extraction (utile à M6).
-  > - Tests `src/lib/plantuml-encoding.test.ts` (Vitest, env node) :
-  >   1. décode le code de référence → les lignes non vides (trim) après normalisation sont exactement `['@startuml', 'Bob -> Alice: Hello!', '@enduml']` ;
-  >   2. décode une URL complète PlantText → même résultat ;
-  >   3. round-trip texte : `decodeDiagram(encodeDiagram(src)) === src` pour une source ASCII **et** une source avec accents (`é`, `à`) ;
-  >   4. code invalide → `DiagramDecodeError` (pas de crash).
-  >
-  > ## Acceptance
-  >
-  > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
-  > - Les 4 cas de test ci-dessus passent. Un seul commit atomique.
-
-- [x] #3 — M3 — Rendu PlantUML 100 % local (@plantuml/core) lazy-loadé + sanitize (labels: —)
-
-  **Issue #3 — détail complet**
-  >
-  > ## Contexte
-  >
-  > Décision verrouillée (docs/DESIGN.md) : rendu 100 % navigateur, aucun serveur distant. Moteur officiel `@plantuml/core` (TeaVM + Viz.js, MIT). Le package contient : `plantuml.js` (module ES autonome, 3,8 Mo), `viz-global.js` (script classique global `Viz`, 1,4 Mo), et des ressources optionnelles `emoji.js`, `openiconic.js`, `themes.js` référencées par URL relative. `plantuml.js` ne doit jamais être bundlé par Vite : il est servi en statique et chargé à la demande.
-  >
-  > ## Changements
-  >
-  > 1. `scripts/sync-plantuml-assets.mjs` : copie `plantuml.js`, `viz-global.js`, `emoji.js`, `openiconic.js`, `themes.js` depuis `node_modules/@plantuml/core/` vers `public/plantuml/` (créer le dossier). Ajouter `"postinstall": "node scripts/sync-plantuml-assets.mjs"` dans package.json (`public/plantuml/` est gitignoré).
-  > 2. `src/lib/render-plantuml.ts` :
-  >    - `renderPlantUml(source: string, opts?: { dark?: boolean }): Promise<string>` → SVG sanitizé.
-  >    - Charge `/plantuml/viz-global.js` **une seule fois** via une balise `<script>` classique (promesse singleton, rejeter proprement en cas d'échec de chargement), puis `await import(/* @vite-ignore */ '/plantuml/plantuml.js')`.
-  >    - Appelle `renderToString(lines, onSuccess, onError, { dark })` avec `lines = source.split(/\r\n|\n|\r/)`.
-  >    - Garde « latest request » : si un nouveau rendu arrive avant que l'ancien ne réponde, ignorer la réponse périmée (pas de flash de vieux SVG).
-  >    - Sanitize avec DOMPurify (`USE_PROFILES: { svg: true, svgFilters: true }`), conserver `xmlns`/`viewBox`.
-  >    - `PlantUmlRenderError` avec le message moteur ; `parsePlantUmlError(message)` exporté, qui extrait le numéro de ligne (`/Error line (\d+)/i`) et un message court.
-  >    - Aucun import statique de `@plantuml/core` ailleurs dans le code.
-  > 3. Tests unitaires `src/lib/render-plantuml.test.ts` : `parsePlantUmlError` (avec/sans ligne), gestion d'un rejet de chargement (au moins un test sur la logique pure).
-  >
-  > ## Acceptance
-  >
-  > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
-  > - Après `pnpm build` : `dist/plantuml/plantuml.js` et `dist/plantuml/viz-global.js` existent, et aucun JS de `dist/assets/` ne dépasse ~1 Mo (le moteur n'est pas inliné).
-  > - Vérification navigateur (`pnpm dev` + MCP chrome-devtools si dispo, sinon au minimum via la console) : rendre `@startuml\nBob -> Alice: Hello!\n@enduml` produit un SVG contenant « Bob » et « Alice », sans erreur console.
-
 - [ ] #4 — M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) (labels: —)
 
   **Issue #4 — détail complet**
@@ -224,3 +136,82 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   >
   > - `printf '@startuml\nBob -> Alice: Hello!\n@enduml\n' | pnpm encode` produit une URL `/view/<code>` dont le décodage redonne la source.
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts ; `skill/SKILL.md` présent et cohérent avec la commande réelle.
+
+- [ ] #9 — M9 — Style par défaut soigné du rendu (design injecté, pas de thèmes) (labels: —)
+
+  **Issue #9 — détail complet**
+  >
+  > ## Contexte
+  >
+  > Décision produit : pas de système de thèmes multiples. Un **seul style par défaut** doit donner un rendu soigné et cohérent (nodes, edges, textes) sans jamais toucher à la source de l'utilisateur. Le style doit se retrouver dans les exports SVG/PNG.
+  >
+  > ## Changements
+  >
+  > - `src/lib/default-style.ts` : bloc PlantUML `<style>` (moteur de style intégré) couvrant les sélecteurs principaux : `root`, `node`, `edge`, `participant`, `actor`, `boundary`, `control`, `entity`, `component`, `usecase`, `class`, `interface`… + `skinparam` de secours pour les types non couverts par le moteur de style (ex. activity, state). Deux variantes : dark et light.
+  > - Injection dans `renderPlantUml` : insérer le bloc juste après la première directive `@start…`. Règle de précédence : notre bloc est inséré AVANT le contenu utilisateur → un `skinparam`/style explicite de l'utilisateur gagne toujours.
+  > - Police : utiliser une pile de polices système propre cohérente avec l'UI.
+  > - Vérifier sur les 4 types d'exemples (sequence, class, activity, usecase) en dark et light : lisibilité, flèches, labels, clusters. Si un type rend mal avec `<style>`, compléter avec des `skinparam`.
+  > - Tests unitaires : fonction d'injection (`injectDefaultStyle(source, { dark })`) — source avec/sans `@startuml`, source avec style utilisateur existant (ne pas casser).
+  >
+  > ## Acceptance
+  >
+  > - Rendu visuellement cohérent sur les 4 exemples (captures chrome-devtools dark + light).
+  > - Export SVG/PNG contient le style (le SVG affiché et le SVG exporté sont identiques).
+  > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
+
+- [ ] #10 — M10 — Historique local des diagrammes ouverts (localStorage) (labels: —)
+
+  **Issue #10 — détail complet**
+  >
+  > ## Contexte
+  >
+  > Quand on ouvre `/view/<code>` (venir d'un lien est le flux principal), le diagramme doit être retrouvable facilement sans recopier d'URL. Tout est local (localStorage), aucun backend.
+  >
+  > ## Changements
+  >
+  > - `src/lib/history.ts` :
+  >   - clé `plantview:history` : tableau `{ code, title, viewedAt }`, **dédupliqué par `code`** (un re-open remonte l'entrée), max **50** (les plus anciens sortent), plus récent en premier.
+  >   - `addToHistory(code, title)`, `listHistory()`, `removeFromHistory(code)`, `clearHistory()`.
+  >   - Parsing défensif + try/catch (JSON corrompu → reset ; quota/mode privé → no-op silencieux, jamais d'erreur bloquante).
+  >   - `extractTitle(source)` : directive `title …`, sinon première ligne utile, sinon `code.slice(0, 12) + '…'`.
+  > - Enregistrement : dans `View` après décodage réussi (titre dérivé de la source décodée) ; aussi lors de l'action « View » depuis l'éditeur.
+  > - UI : route `/history` — liste des entrées (titre, date relative, code tronqué) avec actions : ouvrir, copier le lien, supprimer, tout effacer ; état vide soigné ; responsive. Liens d'accès depuis la home et la toolbar du viewer.
+  > - Le rendu ne doit JAMAIS échouer si localStorage est indisponible.
+  >
+  > ## Acceptance
+  >
+  > - Ouvrir deux fois la même URL ne crée pas de doublon (une seule entrée, remontée en tête).
+  > - Recharger le navigateur conserve l'historique ; « Clear all » vide tout ; suppression unitaire OK.
+  > - Tests unitaires : dédup, cap 50, JSON corrompu → reset sûr, extraction de titre.
+  > - QA navigateur : ouvrir un lien → home → History → réouverture du même diagramme ; zéro erreur console.
+
+- [ ] #11 — M11 — Déplacer les nœuds (drag) dans le viewer (labels: —)
+
+  **Issue #11 — détail complet**
+  >
+  > ## Contexte
+  >
+  > Pouvoir ajuster manuellement la position des nœuds après le layout PlantUML/Graphviz, pour peaufiner un diagramme avant export. Le rendu reste le SVG PlantUML : **pas de re-layout**, on manipule le SVG rendu (translation des nœuds + ré-ancrage des edges connectés).
+  >
+  > ## Périmètre / limites (à documenter dans le README)
+  >
+  > - Supporté : diagrammes « graphe » (class, component, deployment, usecase, object) où les éléments sont des nœuds reliés par des edges.
+  > - Exclu : sequence, timing (déplacer des lignes de vie/colonnes n'a pas de sens) → drag désactivé.
+  > - Les exports SVG/PNG reflètent les positions courantes.
+  >
+  > ## Changements
+  >
+  > - **Spike obligatoire d'abord** (résultat documenté dans progress.txt) : rendre un exemple class et un exemple component avec le moteur local, inspecter la structure SVG réelle (groupes `<g>` des entités, ids/classes, paths des edges, labels, clusters) et confirmer une stratégie d'identification nœud/edge robuste. **Si la structure ne permet pas un ré-ancrage propre, le documenter et s'arrêter là** (pas de bricolage) — proposer alors l'alternative la plus proche (ex. bouton qui re-render avec d'autres options de layout) et terminer l'issue.
+  > - `src/lib/svg-drag.ts` :
+  >   - identification des groupes « nœud » (heuristique testée sur les exemples) et des edges connectés ;
+  >   - au drag : translation du groupe nœud + ré-ancrage des extrémités des paths d'edges (premier/dernier point) en conservant les waypoints intermédiaires ;
+  >   - pointer events, curseur grab/grabbing, pas de sélection de texte pendant le drag.
+  > - `src/components/DiagramCanvas.tsx` : mode « Adjust » activable via la toolbar (icône move), désactivé par défaut ; pendant le drag, court-circuiter le pan de react-zoom-pan-pinch ; bouton « Reset layout » qui restaure le SVG d'origine.
+  > - Tests unitaires : maths d'extraction/reconstruction de path pour le ré-ancrage.
+  >
+  > ## Acceptance
+  >
+  > - Class diagram : déplacer un nœud déplace proprement ses edges (pointes attachées), zéro erreur console ; « Reset layout » restaure le rendu initial.
+  > - Sequence diagram : drag inactif, rien ne casse.
+  > - Export SVG/PNG contient les positions déplacées.
+  > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts + QA navigateur.

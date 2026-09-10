@@ -23,8 +23,11 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
+| 9 | M9 — Style par défaut soigné du rendu (design injecté) | TODO |
+| 10 | M10 — Historique local des diagrammes ouverts (localStorage) | TODO |
+| 11 | M11 — Déplacer les nœuds (drag) dans le viewer | TODO |
 
-Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 + 6 ; 8 dépend de 2.
+Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 + 6 ; 8 dépend de 2 ; 9 dépend de 3 (rendu, indépendant du viewer) ; 10 et 11 dépendent de 4.
 
 ## Itérations
 
