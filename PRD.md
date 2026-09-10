@@ -3,7 +3,7 @@
 Backlog généré depuis les issues GitHub ouvertes. Chaque item est une tâche.
 Coche la case quand la tâche est terminée. Une seule tâche par itération Ralph.
 
-- [ ] #1 — M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base (labels: —)
+- [x] #1 — M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base (labels: —)
 
   **Issue #1 — détail complet**
   > ## Contexte

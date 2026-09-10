@@ -15,7 +15,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 
 | # | Tâche | Statut |
 | --- | --- | --- |
-| 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | TODO |
+| 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | DONE |
 | 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | TODO |
 | 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | TODO |
 | 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | TODO |
@@ -28,4 +28,14 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
 
 ## Itérations
 
-(rempli par Ralph)
+### M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base — DONE
+
+- Base scaffoldée depuis **create-vite@7.1.3** (`template-react-ts`) : l'issue #1 exige `eslint.config.js`, or `create-vite@latest` (v9) est passé à **oxlint** (`.oxlintrc.json`, plus d'ESLint). Décision : rester sur ESLint + flat config, conformément à l'issue (« lint (eslint) »).
+- Fichiers copiés sans écraser `README.md`, `AGENTS.md`, `docs/` : `package.json`, `tsconfig*.json`, `vite.config.ts`, `index.html`, `eslint.config.js`, `src/`, `public/vite.svg`. `.gitignore` fusionné (entrées template + `public/plantuml/`, `.ralph/`, `playwright-report/`, `test-results/`, `.vercel/`).
+- Dépendances : react-router-dom, @plantuml/core, plantuml-encoder, dompurify, react-zoom-pan-pinch, @uiw/react-codemirror, lucide-react ; dev : tailwindcss, @tailwindcss/vite, @types/plantuml-encoder, vitest.
+- pnpm 10 bloquait le postinstall d'esbuild → `pnpm.onlyBuiltDependencies: ["esbuild"]` ajouté dans `package.json`.
+- Tailwind 4 branché via le plugin `@tailwindcss/vite` ; `src/index.css` = `@import "tailwindcss";` + reset hauteur plein écran.
+- Scripts package.json : `dev`, `build`, `lint`, `typecheck` (`tsc -b`), `test` (`vitest run --passWithNoTests`), `preview`.
+- Router : `src/main.tsx` (BrowserRouter) + `src/App.tsx` avec `/` → Home, `/view/:code` → View, `/edit/:code?` → Edit (placeholders sans logique métier). `src/components/` et `src/lib/` créés (`.gitkeep`).
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts. QA navigateur (chrome-devtools) : `/`, `/view/abc`, `/edit/abc`, `/edit` rendus correctement, zéro erreur console.
+
