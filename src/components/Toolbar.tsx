@@ -7,9 +7,11 @@ import {
   History,
   ImageDown,
   Moon,
+  Move,
   Pencil,
   RotateCcw,
   Sun,
+  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -55,12 +57,20 @@ export interface ToolbarProps {
   disabled?: boolean
   /** Transient feedback shown above the toolbar. */
   message?: string | null
+  /** True when the diagram contains movable nodes (`g.entity` groups). */
+  adjustable: boolean
+  /** True while node adjustment mode is active. */
+  adjusting: boolean
+  /** True when a drag changed the layout (enables “Reset layout”). */
+  layoutModified: boolean
   editHref: string
   onToggleDark: () => void
   onZoomIn: () => void
   onZoomOut: () => void
   onFit: () => void
   onReset: () => void
+  onToggleAdjust: () => void
+  onResetLayout: () => void
   onDownloadSvg: () => void
   onDownloadPng: () => void
   onCopyLink: () => void
@@ -71,12 +81,17 @@ export function Toolbar({
   dark,
   disabled = false,
   message = null,
+  adjustable,
+  adjusting,
+  layoutModified,
   editHref,
   onToggleDark,
   onZoomIn,
   onZoomOut,
   onFit,
   onReset,
+  onToggleAdjust,
+  onResetLayout,
   onDownloadSvg,
   onDownloadPng,
   onCopyLink,
@@ -97,6 +112,22 @@ export function Toolbar({
         <ToolbarButton label="Reset view" onClick={onReset} disabled={disabled}>
           <RotateCcw className="size-4" aria-hidden="true" />
         </ToolbarButton>
+
+        <Divider />
+
+        <ToolbarButton
+          label="Adjust layout"
+          onClick={onToggleAdjust}
+          disabled={disabled || !adjustable}
+          pressed={adjusting}
+        >
+          <Move className="size-4" aria-hidden="true" />
+        </ToolbarButton>
+        {adjusting ? (
+          <ToolbarButton label="Reset layout" onClick={onResetLayout} disabled={!layoutModified}>
+            <Undo2 className="size-4" aria-hidden="true" />
+          </ToolbarButton>
+        ) : null}
 
         <Divider />
 

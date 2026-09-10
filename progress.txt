@@ -25,7 +25,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | DONE |
 | 9 | M9 — Style par défaut soigné du rendu (design injecté) | DONE |
 | 10 | M10 — Historique local des diagrammes ouverts (localStorage) | DONE |
-| 11 | M11 — Déplacer les nœuds (drag) dans le viewer | TODO |
+| 11 | M11 — Déplacer les nœuds (drag) dans le viewer | DONE |
 
 Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 + 6 ; 8 dépend de 2 ; 9 dépend de 3 (rendu, indépendant du viewer) ; 10 et 11 dépendent de 4.
 
@@ -217,3 +217,29 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - Action « View diagram » de l'éditeur → entrée « class A » enregistrée ; lien « Open history » de la toolbar viewer → `/history`.
   - Dark toggle sur `/history` (`data-theme=dark`, `plantview:theme=dark`) ; mobile 390 px : aucun débordement horizontal ; **zéro message console error/warn** sur toute la session.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 8/8 ; bundle 862,28 Ko / 275,9 Ko gzip, +10,9 Ko vs M9). Commit à suivre, issue #10 fermée.
+
+### M11 — Déplacer les nœuds (drag) dans le viewer — DONE
+
+- **Spike SVG (obligatoire, chrome-devtools, moteur local, exemples réels)** :
+  - Le moteur marque proprement ses éléments : nœuds `g[id="ent####"] class="entity"`, arêtes `g[id="lnk##"] class="link"` contenant `path` + `polygon` (pointe de flèche) + éventuellement `text` (libellé). Les packages/clusters sont `g[id^="ent"] class="cluster"` — ils partagent le préfixe `ent`, d'où l'identification par **classe `entity`** et pas par id.
+  - **Types** (rendu réel, comptage de classes) : class / component / deployment / usecase / object / state émettent `entity` + `link` ; **activity, sequence, timing, mindmap n'émettent ni l'un ni l'autre** → détection de capacité fiable. Les pseudo-états `[*]` de state ont `class="start_entity"`/`end_entity` (exclus par la classe exacte `entity`).
+  - **Ancrage des arêtes** : l'extrémité d'un path est à ~0-1 unité de la bbox du nœud ; côté pointe de flèche, le path s'arrête à ~4-5 unités (base de la flèche) mais le **tip du polygone** touche la bbox → l'ancrage se fait par « nœud le plus proche » (start = 1er point, end = tip si polygone sinon dernier point), tolérance 24 ; séparation observée 0,4 vs 54+ sur les exemples. Géométrie absolue (`M…C…`), aucun `transform` sur les groupes entity.
+  - **Coordonnées pointeur** : `svg.getScreenCTM().inverse()` inclut le transform CSS de react-zoom-pan-pinch (vérifié : point écran re-mappé == centre de bbox, scale 2,3).
+  - Conclusion : structure exploitable → ré-ancrage propre possible, pas de repli nécessaire.
+- `src/lib/svg-drag.ts` :
+  - Pur (testé) : `tracePath`/`getPathStart`/`getPathEnd` (résolution `M/L/H/V/C/S/Q/T/A`, relatif et absolu, `Z`), `translatePathStart` (M absolu), `translatePathEnd` (dernier segment, `H`/`V`, relatif, `Z` ignoré), `parsePolygonPoints`/`translatePolygonPoints`, `distanceToBox`, `formatCoordinate`, `supportsNodeDragging(svg)` (cherche le token de classe `entity`).
+  - DOM : `findDraggableNode` (closest `g.entity` du bon SVG), `beginNodeDrag(svg, node)` → session `move(dx, dy)` cumulative : snapshot du `transform` d'origine + pour chaque arête reliée (`path`, polygone) les valeurs d'origine, puis translation exacte à chaque frame. Les **libellés d'arête** suivent à **delta/2** (delta complet pour une self-loop, 2 extrémités attachées) ; `x`/`y` du `<text>`, sinon `tspan`, sinon `transform` de repli.
+- `src/components/DiagramCanvas.tsx` :
+  - pointeurs `down/move/up/cancel/lostpointercapture` sur le host SVG (React), `setPointerCapture` best-effort (try/catch), mapping écran → unités SVG via CTM, curseurs `grab`/`grabbing` et `touch-action: none` en CSS (`index.css`), indicatif « modified » dès 0,5 unité.
+  - `panning={{ excluded: ['g.entity'] }}` en mode Adjust : le pan de react-zoom-pan-pinch ne démarre pas sur un nœud (mais reste actif sur le fond) ; `event.stopPropagation()` en plus.
+  - handle : `getSvg()` (XMLSerializer du SVG affiché) et `resetLayout()` (remonte le host via `key`, mutations annulées) ; callback `onLayoutChanged(modified)`.
+- `src/components/Toolbar.tsx` : bouton **Adjust layout** (icône Move, `aria-pressed`, `disabled` si le type de diagramme ne s'y prête pas) + bouton **Reset layout** (icône Undo2, visible en mode Adjust, `disabled` tant qu'aucun déplacement).
+- `src/routes/View.tsx` : état `adjusting`/`layoutModified` (reset quand le SVG change ou que le code change), capacité mémoïsée via `supportsNodeDragging`, exports SVG/PNG basés sur `getSvg()` → **les positions déplacées sont exportées** (le lien lui-même n'est pas modifié).
+- README : section « Déplacer les nœuds (mode Adjust) » (types pris en charge, types désactivés, limites : pas de re-layout/redimensionnement de clusters, positions non encodées dans l'URL).
+- Tests : +21 unitaires (`svg-drag.test.ts`) → **135 au total** (endpoints/relatif/`Z`/`H`/`V`, translation start/end, polygones, distance bbox, capacité `entity` vs `start_entity`, formatage). E2e : +2 (`e2e/drag.spec.ts`, codes calculés via `encodeDiagram(examples)`) → **10 au total** : drag réel souris d'un nœud class → `transform` + extrémité d'arête décalée du même delta, export SVG capturé (download Playwright) contenant `translate(` et le path déplacé, Reset layout restaure ; Adjust désactivé sur sequence.
+- QA navigateur (chrome-devtools, dev) :
+  - Class (Diagram/Link/Viewer) : drag du nœud `Diagram` → `translate(93.8274 -124.5)`, les 2 arêtes entrantes re-ancrées exactement du même delta, pointes de flèches et waypoints corrects (capture) ; `Reset layout` → `transform` supprimés et `d` d'origine restaurés au caractère près ; bouton Reset re-désactivé.
+  - Component (Web/API/DB avec libellés `uses`/`reads`) : drag de DB → path + polygone au delta exact, libellé à delta/2 (vérifié numériquement 220 → 94,5 pour dy = -251) ; export SVG intercepté = 3 571 octets avec `transform`, path déplacé et libellé.
+  - State (`[*] --> Idle --> Busy`) : drag d'`Idle` → arêtes recollées, pseudo-états `start_entity`/`end_entity` intacts ; sequence : bouton Adjust `disabled`, 0 groupe `entity`.
+  - Zéro message console error/warn sur toutes les pages testées.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 10/10). Commit à suivre, issue #11 fermée.

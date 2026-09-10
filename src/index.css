@@ -35,3 +35,16 @@ html.dark .diagram-grid {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Adjust mode: entity nodes are draggable, panning starts on the background. */
+.diagram-svg.diagram-adjusting {
+  touch-action: none;
+}
+
+.diagram-svg.diagram-adjusting g.entity {
+  cursor: grab;
+}
+
+.diagram-svg.diagram-dragging g.entity {
+  cursor: grabbing;
+}

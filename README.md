@@ -44,6 +44,14 @@ PlantView est une SPA 100 % statique : `pnpm build` produit le dossier `dist/` (
 
 Purement client, sans backend : il n'existe **pas d'URL image embarquable** (`<img src="…">`) utilisable dans un README ou Slack. Un lien PlantView s'ouvre dans le navigateur, voilà tout ; l'export SVG/PNG reste la solution pour partager une image. Voir `docs/DESIGN.md`.
 
+## Déplacer les nœuds (mode Adjust)
+
+Dans le viewer, le bouton **Adjust layout** active le déplacement manuel des nœuds du SVG rendu (curseur grab) : le nœud est translaté et les arêtes connectées sont ré-ancrées — extrémités recollées au nœud, waypoints intermédiaires conservés, pointes de flèches et libellés suivis. **Reset layout** restaure le rendu d'origine, et les exports SVG/PNG reflètent les positions courantes (le code du lien, lui, reste inchangé).
+
+- **Pris en charge** : diagrammes « graphe » (class, component, deployment, usecase, object, state) où le moteur émet des groupes `g.entity` ; le pan de la surface reste disponible en dehors des nœuds.
+- **Désactivé** : sequence, timing, activity, mindmap (aucun groupe `g.entity`), ainsi que la preview de l'éditeur.
+- **Limites** : pas de re-layout ni de redimensionnement des packages/clusters ; les positions ajustées ne sont pas encodées dans l'URL (elles ne valent que pour la session et l'export).
+
 ## Liens pour agents
 
 Un agent doit encoder le diagramme avec le script fourni, jamais à la main

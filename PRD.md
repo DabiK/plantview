@@ -185,7 +185,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - Tests unitaires : dédup, cap 50, JSON corrompu → reset sûr, extraction de titre.
   > - QA navigateur : ouvrir un lien → home → History → réouverture du même diagramme ; zéro erreur console.
 
-- [ ] #11 — M11 — Déplacer les nœuds (drag) dans le viewer (labels: —)
+- [x] #11 — M11 — Déplacer les nœuds (drag) dans le viewer (labels: —)
 
   **Issue #11 — détail complet**
   >

@@ -9,6 +9,7 @@ import { downloadPng, downloadSvg } from '../lib/export'
 import { addToHistory, extractTitle } from '../lib/history'
 import { DiagramDecodeError, decodeDiagram } from '../lib/plantuml-encoding'
 import { PlantUmlRenderError, renderPlantUml } from '../lib/render-plantuml'
+import { supportsNodeDragging } from '../lib/svg-drag'
 import {
   applyThemeToDocument,
   prefersDarkScheme,
@@ -55,6 +56,8 @@ export default function View() {
   )
   const [state, setState] = useState<RenderState>({ status: 'loading', svg: null })
   const [message, setMessage] = useState<string | null>(null)
+  const [adjusting, setAdjusting] = useState(false)
+  const [layoutModified, setLayoutModified] = useState(false)
   const canvasRef = useRef<DiagramCanvasHandle | null>(null)
   const messageTimer = useRef<number | null>(null)
 
@@ -140,14 +143,35 @@ export default function View() {
   const renderedSvg =
     state.status === 'ready' ? state.svg : state.status === 'loading' ? state.svg : null
 
+  const adjustable = useMemo(() => supportsNodeDragging(renderedSvg ?? ''), [renderedSvg])
+
+  // A new render (code or theme change) rebuilds the SVG: nothing is modified anymore.
+  useEffect(() => {
+    setLayoutModified(false)
+  }, [renderedSvg])
+
+  useEffect(() => {
+    if (!adjustable) setAdjusting(false)
+  }, [adjustable])
+
   const handleToggleDark = useCallback(() => {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
   }, [])
 
+  const handleToggleAdjust = useCallback(() => {
+    setAdjusting((current) => !current)
+  }, [])
+
+  const handleResetLayout = useCallback(() => {
+    canvasRef.current?.resetLayout()
+    showMessage('Layout reset')
+  }, [showMessage])
+
   const handleDownloadSvg = useCallback(() => {
-    if (!renderedSvg) return
+    const svg = canvasRef.current?.getSvg() ?? renderedSvg
+    if (!svg) return
     try {
-      downloadSvg(renderedSvg, SVG_FILENAME)
+      downloadSvg(svg, SVG_FILENAME)
       showMessage('SVG downloaded')
     } catch {
       showMessage('SVG export failed')
@@ -155,9 +179,10 @@ export default function View() {
   }, [renderedSvg, showMessage])
 
   const handleDownloadPng = useCallback(async () => {
-    if (!renderedSvg) return
+    const svg = canvasRef.current?.getSvg() ?? renderedSvg
+    if (!svg) return
     try {
-      await downloadPng(renderedSvg, PNG_FILENAME, { dark: theme === 'dark' })
+      await downloadPng(svg, PNG_FILENAME, { dark: theme === 'dark' })
       showMessage('PNG downloaded')
     } catch (error) {
       showMessage(error instanceof Error ? error.message : 'PNG export failed')
@@ -177,7 +202,13 @@ export default function View() {
     <main className="relative flex h-dvh flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="diagram-grid relative min-h-0 flex-1">
         {renderedSvg ? (
-          <DiagramCanvas key={code} ref={canvasRef} svg={renderedSvg} />
+          <DiagramCanvas
+            key={code}
+            ref={canvasRef}
+            svg={renderedSvg}
+            adjustMode={adjusting}
+            onLayoutChanged={setLayoutModified}
+          />
         ) : state.status === 'loading' ? (
           <LoadingSkeleton />
         ) : null}
@@ -203,12 +234,17 @@ export default function View() {
         dark={theme === 'dark'}
         disabled={state.status !== 'ready'}
         message={message}
+        adjustable={adjustable}
+        adjusting={adjusting}
+        layoutModified={layoutModified}
         editHref={`/edit/${code}`}
         onToggleDark={handleToggleDark}
         onZoomIn={() => canvasRef.current?.zoomIn()}
         onZoomOut={() => canvasRef.current?.zoomOut()}
         onFit={() => canvasRef.current?.fit()}
         onReset={() => canvasRef.current?.reset()}
+        onToggleAdjust={handleToggleAdjust}
+        onResetLayout={handleResetLayout}
         onDownloadSvg={handleDownloadSvg}
         onDownloadPng={() => void handleDownloadPng()}
         onCopyLink={() => void handleCopyLink()}
