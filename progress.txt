@@ -1,0 +1,31 @@
+# PlantView — suivi de la boucle Ralph
+
+## Objectif
+
+App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`, éditeur minimal `/edit`, aucun backend, aucun serveur PlantUML distant.
+
+## Règles
+
+- Une seule tâche par itération (issue GitHub = tâche). Ne jamais commencer la suivante dans la même itération.
+- `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts avant commit (plus `pnpm test:e2e` à partir de M7).
+- Commits atomiques, jamais de build cassé. Rendu local uniquement (aucun appel à plantuml.com/planttext/kroki).
+- Mettre à jour ce fichier + cocher `PRD.md` + fermer l'issue GitHub (`gh issue close <n>`) à chaque tâche terminée.
+
+## Backlog (issues GitHub ouvertes)
+
+| # | Tâche | Statut |
+| --- | --- | --- |
+| 1 | M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base | TODO |
+| 2 | M2 — Codec d'URL PlantUML (décoder/encoder) + tests | TODO |
+| 3 | M3 — Rendu PlantUML local (@plantuml/core) lazy + sanitize | TODO |
+| 4 | M4 — Viewer /view/:code (zoom/pan, dark, export SVG/PNG) | TODO |
+| 5 | M5 — Éditeur minimal /edit (CodeMirror, preview live, autosave, erreurs stylées, partage) | TODO |
+| 6 | M6 — Page d'accueil / (coller un input, galerie d'exemples, section agents) | TODO |
+| 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | TODO |
+| 8 | M8 — Script d'encodage + skill agent pour générer les liens | TODO |
+
+Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 + 6 ; 8 dépend de 2.
+
+## Itérations
+
+(rempli par Ralph)
