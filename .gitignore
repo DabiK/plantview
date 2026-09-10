@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.ralph/
+public/plantuml/
+*.local
+.DS_Store
+playwright-report/
+test-results/
+.vercel/
