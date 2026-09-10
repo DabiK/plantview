@@ -6,22 +6,28 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
 - [ ] #1 — M1 — Scaffold Vite + React + TS + Tailwind 4 + structure de base (labels: —)
 
   **Issue #1 — détail complet**
-  >
   > ## Contexte
   >
-  > Repo vide : seuls README.md, AGENTS.md, docs/DESIGN.md et .gitignore existent (commit initial). Aucun package.json. Cette issue crée le squelette de l'app. **Lire AGENTS.md et docs/DESIGN.md avant de commencer** : les décisions techniques sont verrouillées.
+  > Repo vide : seuls README.md, AGENTS.md, docs/DESIGN.md et .gitignore existent. Aucun package.json. Cette issue crée le squelette de l'app. **Lire AGENTS.md et docs/DESIGN.md avant de commencer** : les décisions techniques sont verrouillées. Le dossier de travail est le repo ; tout chemin hors repo doit passer par `mktemp -d`.
   >
   > ## Changements
   >
-  > 1. Scaffolder Vite + React + TS à la racine : `pnpm dlx create-vite@latest . --template react-ts`.
-  >    - S'il refuse de tourner non-interactivement (prompts), scaffolder dans un dossier temporaire (`pnpm dlx create-vite@latest /tmp/plantview-scaffold --template react-ts`) puis copier les fichiers (package.json, tsconfig*.json, vite.config.ts, index.html, src/, eslint config) **sans écraser** README.md, AGENTS.md, docs/ ; fusionner .gitignore.
+  > 1. Scaffolder le template Vite React-TS dans un dossier temporaire **vide**, sans interaction :
+  >
+  >    ```bash
+  >    TMP=$(mktemp -d)
+  >    (cd "$TMP" && pnpm dlx create-vite@latest . --template react-ts)
+  >    ```
+  >
+  >    Copier ensuite les fichiers du template dans le repo (package.json, tsconfig*.json, vite.config.ts, index.html, src/, eslint.config.js) **sans écraser** README.md, AGENTS.md, docs/ ni .gitignore (fusionner .gitignore si le template en a un). Supprimer le dossier temporaire.
+  >
   > 2. Dépendances :
   >    - `pnpm add react-router-dom @plantuml/core plantuml-encoder dompurify react-zoom-pan-pinch @uiw/react-codemirror lucide-react`
   >    - `pnpm add -D tailwindcss @tailwindcss/vite @types/plantuml-encoder vitest`
   > 3. Tailwind 4 : plugin `@tailwindcss/vite` dans `vite.config.ts` ; `src/index.css` = `@import "tailwindcss";` + reset de base.
   > 4. Scripts package.json : `dev`, `build` (`tsc -b && vite build`), `preview`, `lint` (eslint), `typecheck` (`tsc -b`), `test` (`vitest run --passWithNoTests`).
   > 5. Structure : `src/routes/`, `src/components/`, `src/lib/` ; router react-router dans `src/main.tsx` + `src/App.tsx` avec 3 routes placeholder : `/` (Home), `/view/:code` (View), `/edit/:code?` (Edit). Pas de logique métier.
-  > 6. Vérifier que `node_modules/`, `dist/`, `public/plantuml/`, `.ralph/` restent ignorés.
+  > 6. Vérifier que `node_modules/`, `dist/`, `public/plantuml/`, `.ralph/` restent ignorés (`git status --short` propre hors fichiers voulus).
   >
   > ## Acceptance
   >
