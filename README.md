@@ -45,12 +45,17 @@ Purement client, sans backend : il n'existe **pas d'URL image embarquable** (`<i
 
 ## Liens pour agents
 
-Un agent doit encoder le diagramme avec le script fourni, jamais à la main :
+Un agent doit encoder le diagramme avec le script fourni, jamais à la main
+(deflate + alphabet base64 personnalisé : impossible à produire de tête) :
 
 ```bash
-echo '@startuml
-Bob -> Alice: Hello!
-@enduml' | pnpm encode
+printf '%s\n' '@startuml' 'Bob -> Alice: Hello!' '@enduml' | pnpm encode
+# → http://localhost:5173/view/SoWkIImgAStDuNBAJrBGjLDmpCbCJhLIy4ZDoSbNv798pKi1IG80
 ```
 
-Voir `skill/SKILL.md` (M8) pour le workflow complet.
+Le script lit la source par stdin, `--text "…"` ou `--file <path>`. La base de
+l'URL est `http://localhost:5173` par défaut, modifiable via `--base <url>` ou
+`PLANTVIEW_BASE_URL` ; `--code-only` n'affiche que le code encodé. En cas
+d'entrée invalide, il sort en erreur (code 1) avec un message clair.
+
+Voir [`skill/SKILL.md`](skill/SKILL.md) pour le workflow complet des agents.

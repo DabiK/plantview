@@ -48,6 +48,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@7.3.6(@types/node@22.20.2)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@types/node':
+        specifier: ^22.20.2
+        version: 22.20.2
       '@types/plantuml-encoder':
         specifier: ^1.4.2
         version: 1.4.2
