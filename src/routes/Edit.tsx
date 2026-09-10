@@ -9,6 +9,7 @@ import { Toast } from '../components/Toast'
 import { copyText } from '../lib/clipboard'
 import { readDraft, resolveInitialEditorState, writeDraft } from '../lib/editor-state'
 import { diagramExamples } from '../lib/examples'
+import { addToHistory, extractTitle } from '../lib/history'
 import { encodeDiagram } from '../lib/plantuml-encoding'
 import { plantUmlLanguage } from '../lib/plantuml-language'
 import { PlantUmlRenderError, renderPlantUml } from '../lib/render-plantuml'
@@ -193,8 +194,9 @@ export default function Edit() {
       showMessage('Nothing to view yet')
       return
     }
+    addToHistory(viewCode, extractTitle(source, viewCode))
     navigate(`/view/${viewCode}`)
-  }, [viewCode, navigate, showMessage])
+  }, [source, viewCode, navigate, showMessage])
 
   const goToLine = useCallback((line: number) => {
     const view = editorRef.current?.view

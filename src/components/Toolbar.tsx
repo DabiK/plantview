@@ -4,6 +4,7 @@ import {
   Copy,
   Download,
   Expand,
+  History,
   ImageDown,
   Moon,
   Pencil,
@@ -122,6 +123,14 @@ export function Toolbar({
         <ToolbarButton label="Copy link" onClick={onCopyLink}>
           <Copy className="size-4" aria-hidden="true" />
         </ToolbarButton>
+        <Link
+          to="/history"
+          aria-label="Open history"
+          title="Open history"
+          className={BUTTON_CLASSES}
+        >
+          <History className="size-4" aria-hidden="true" />
+        </Link>
 
         <Divider />
 

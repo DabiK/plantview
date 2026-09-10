@@ -9,6 +9,7 @@ Viewer PlantUML 100 % navigateur. Un lien encodé ouvre un diagramme affiché pr
 | `/` | Accueil : coller un diagramme, un code encodé ou une URL PlantText/PlantUML |
 | `/view/:code` | Viewer plein écran (produit principal) |
 | `/edit/:code?` | Éditeur minimal (CodeMirror + preview live) |
+| `/history` | Historique local des diagrammes ouverts (localStorage, jamais envoyé au réseau) |
 
 `code` = encodage PlantUML standard (deflate + alphabet base64 custom), compatible PlantText / plantuml.com. Paramètre optionnel : `?dark=0|1`.
 

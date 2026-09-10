@@ -24,7 +24,7 @@ App React de visualisation PlantUML 100 % client : liens encodés `/view/<code>`
 | 7 | M7 — E2E Playwright + configs de déploiement SPA + doc finale | DONE |
 | 8 | M8 — Script d'encodage + skill agent pour générer les liens | DONE |
 | 9 | M9 — Style par défaut soigné du rendu (design injecté) | DONE |
-| 10 | M10 — Historique local des diagrammes ouverts (localStorage) | TODO |
+| 10 | M10 — Historique local des diagrammes ouverts (localStorage) | DONE |
 | 11 | M11 — Déplacer les nœuds (drag) dans le viewer | TODO |
 
 Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 + 6 ; 8 dépend de 2 ; 9 dépend de 3 (rendu, indépendant du viewer) ; 10 et 11 dépendent de 4.
@@ -196,3 +196,24 @@ Dépendances : 4 et 5 dépendent de 2 + 3 ; 6 dépend de 2 ; 7 dépend de 4 + 5 
   - Lignes d'erreur : source invalide en ligne 3 → `PlantUmlRenderError.line === 3` (API) et l'éditeur affiche « Error at line 3 » cliquable (vérifié en DOM) ; `@startuml\n@enduml` rejette toujours « Empty description » (ligne 2) ; note/actor en dark vérifiés.
 - Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 6/6 ; bundle 851,4 Ko, +4 Ko). Commit `95ee949`, issue #9 fermée.
 
+
+### M10 — Historique local des diagrammes ouverts (localStorage) — DONE
+
+- `src/lib/history.ts` :
+  - clé `plantview:history`, `HISTORY_LIMIT = 50`, entrées `{ code, title, viewedAt }` **plus récentes en premier**, dédupliquées par `code` (une ré-ouverture remonte l'entrée et remplace titre + date).
+  - `parseHistory` défensif : JSON corrompu / mauvaise forme → `[]` ; entrées invalides ignorées ; doublons collapsés (la 1re occurrence, la plus récente, gagne) ; cap 50 au parsing aussi. `listHistory` / `addToHistory` / `removeFromHistory` / `clearHistory` tolèrent storage absent ou qui throw (quota/mode privé → no-op silencieux, `removeItem` best-effort).
+  - `extractTitle(source, code)` : directive `title …` (inline, insensible à la casse, **formes bloc `title` … `end title`**) ; sinon première ligne « utile » (saute `@…`, `!…`, `'…`, `/'…`, `left/right/top/bottom … direction`, `skinparam`, `hide/show/scale/autonumber/start/stop/end`) ; sinon `code.slice(0, 12) + '…'` (seulement si le code dépasse 12 caractères — sinon intact).
+  - `formatRelativeTime(timestamp, now)` : `just now` / `N min ago` / `N h ago` / `N d ago` puis date `en-US` au-delà de 7 jours ; horodatage futur clampé sur `just now`.
+- Enregistrement :
+  - `View.tsx` : décodage mémoïsé (`useMemo`) + effet dédié keyé sur `code` → `addToHistory(code, extractTitle(source, code))` **après décodage réussi** (spec de l'issue), même si le rendu moteur échoue ensuite. Le refactor garde le comportement existant (l'effet de rendu dépend de `decoded` + `theme`).
+  - `Edit.tsx` : `handleView` enregistre avant de naviguer (dédoublonné si le viewer reprend la main ensuite).
+- UI `src/routes/History.tsx` (route `/history` dans `App.tsx`) :
+  - header cohérent (PlantView, Home, Editor, toggle dark suivant `?dark=0|1` > localStorage > système) ; liste (titre cliquable → viewer, date relative, code tronqué 16 car. avec code complet en `title`) ; actions par entrée : copier le lien (`copyText` + toast), supprimer ; bouton « Clear all » ; état vide soigné avec CTA galerie/éditeur ; responsive (pas de débordement à 390 px).
+  - Accès : liens History dans le header **et** le footer de la home + icône History dans la toolbar du viewer.
+- Tests : +22 unitaires (`history.test.ts`) → **114 au total** (dédup, cap 50, JSON corrompu, storage indisponible/plein, parsing, titres inline/bloc/fallback, temps relatifs). E2e : +2 (`e2e/history.spec.ts`) → **8 au total** (enregistrement + liste ; dédup + Clear all).
+- QA navigateur (chrome-devtools, dev) :
+  - État vide → ouverture du code de référence → entrée `Bob -> Alice: Hello!` ; clic carte class → 2 entrées, plus récente en premier (`class Diagram {`) ; ré-ouverture de Bob → remonté en tête, toujours 2 entrées (dédup vérifiée en localStorage).
+  - Copier le lien → toast « Link copied » + presse-papiers = URL `/view/<code>` exacte ; suppression unitaire → 1 entrée en DOM et en storage ; reload → historique conservé ; « Clear all » → état vide, clé localStorage supprimée.
+  - Action « View diagram » de l'éditeur → entrée « class A » enregistrée ; lien « Open history » de la toolbar viewer → `/history`.
+  - Dark toggle sur `/history` (`data-theme=dark`, `plantview:theme=dark`) ; mobile 390 px : aucun débordement horizontal ; **zéro message console error/warn** sur toute la session.
+- Vérifs : `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` verts (e2e 8/8 ; bundle 862,28 Ko / 275,9 Ko gzip, +10,9 Ko vs M9). Commit à suivre, issue #10 fermée.

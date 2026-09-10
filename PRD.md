@@ -159,7 +159,7 @@ Coche la case quand la tâche est terminée. Une seule tâche par itération Ral
   > - Export SVG/PNG contient le style (le SVG affiché et le SVG exporté sont identiques).
   > - `pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts.
 
-- [ ] #10 — M10 — Historique local des diagrammes ouverts (localStorage) (labels: —)
+- [x] #10 — M10 — Historique local des diagrammes ouverts (localStorage) (labels: —)
 
   **Issue #10 — détail complet**
   >

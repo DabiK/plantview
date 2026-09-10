@@ -146,6 +146,12 @@ export default function Home() {
 
           <nav className="ml-auto flex items-center gap-1">
             <Link
+              to="/history"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200/60 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            >
+              History
+            </Link>
+            <Link
               to="/edit"
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200/60 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             >
@@ -352,6 +358,12 @@ export default function Home() {
         <footer className="mt-auto flex flex-col gap-2 border-t border-slate-200/80 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:text-slate-400">
           <p>Runs entirely in your browser — your diagram never leaves it.</p>
           <nav className="flex items-center gap-4">
+            <Link
+              to="/history"
+              className="transition hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:hover:text-white"
+            >
+              History
+            </Link>
             <Link
               to="/edit"
               className="transition hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:hover:text-white"

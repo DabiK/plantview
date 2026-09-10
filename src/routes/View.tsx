@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { LoaderCircle } from 'lucide-react'
 import { DiagramCanvas, type DiagramCanvasHandle } from '../components/DiagramCanvas'
@@ -6,6 +6,7 @@ import { ErrorPanel } from '../components/ErrorPanel'
 import { Toolbar } from '../components/Toolbar'
 import { copyText } from '../lib/clipboard'
 import { downloadPng, downloadSvg } from '../lib/export'
+import { addToHistory, extractTitle } from '../lib/history'
 import { DiagramDecodeError, decodeDiagram } from '../lib/plantuml-encoding'
 import { PlantUmlRenderError, renderPlantUml } from '../lib/render-plantuml'
 import {
@@ -59,6 +60,27 @@ export default function View() {
 
   const viewUrl = buildViewUrl(code, `${window.location.origin}${import.meta.env.BASE_URL}`)
 
+  const decoded = useMemo<
+    { source: string; error: null } | { source: null; error: string }
+  >(() => {
+    try {
+      return { source: decodeDiagram(code), error: null }
+    } catch (error) {
+      return {
+        source: null,
+        error:
+          error instanceof DiagramDecodeError ? error.message : 'This diagram code is invalid.',
+      }
+    }
+  }, [code])
+
+  // Every decodable diagram opened in the viewer is recorded locally.
+  useEffect(() => {
+    if (decoded.source !== null) {
+      addToHistory(code, extractTitle(decoded.source, code))
+    }
+  }, [code, decoded])
+
   const showMessage = useCallback((text: string) => {
     setMessage(text)
     if (messageTimer.current !== null) {
@@ -85,17 +107,16 @@ export default function View() {
     let cancelled = false
     setState((previous) => ({ status: 'loading', svg: previous.status === 'ready' ? previous.svg : null }))
 
-    let source: string
-    try {
-      source = decodeDiagram(code)
-    } catch (error) {
-      const errorMessage =
-        error instanceof DiagramDecodeError ? error.message : 'This diagram code is invalid.'
-      setState({ status: 'error', message: errorMessage, line: null })
+    if (decoded.source === null) {
+      setState({
+        status: 'error',
+        message: decoded.error ?? 'This diagram code is invalid.',
+        line: null,
+      })
       return
     }
 
-    renderPlantUml(source, { dark: theme === 'dark' })
+    renderPlantUml(decoded.source, { dark: theme === 'dark' })
       .then((svg) => {
         if (!cancelled) {
           setState({ status: 'ready', svg })
@@ -114,7 +135,7 @@ export default function View() {
     return () => {
       cancelled = true
     }
-  }, [code, theme])
+  }, [decoded, theme])
 
   const renderedSvg =
     state.status === 'ready' ? state.svg : state.status === 'loading' ? state.svg : null
